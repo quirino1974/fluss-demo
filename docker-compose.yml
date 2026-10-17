@@ -1,0 +1,164 @@
+x-flink: &flink
+  build: ./flink
+  image: fluss-demo-flink:1.20-1.0.0
+  depends_on:
+    - jobmanager
+
+services:
+  rustfs:
+    image: rustfs/rustfs:1.0.0-alpha.83
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - RUSTFS_ACCESS_KEY=rustfsadmin
+      - RUSTFS_SECRET_KEY=rustfsadmin
+      - RUSTFS_CONSOLE_ENABLE=true
+    volumes:
+      - ./data/rustfs:/data
+    command: /data
+
+  rustfs-init:
+    image: rustfs/rc:v0.1.36
+    depends_on:
+      - rustfs
+    entrypoint: >
+      /bin/sh -c "
+      until rc alias set rustfs http://rustfs:9000 rustfsadmin rustfsadmin; do sleep 1; done;
+      rc mb --ignore-existing rustfs/fluss;
+      "
+
+  zookeeper:
+    image: zookeeper:3.9.2
+    restart: always
+    volumes:
+      - ./data/zookeeper/data:/data
+      - ./data/zookeeper/datalog:/datalog
+
+  coordinator-server:
+    image: apache/fluss:1.0.0
+    command: coordinatorServer
+    depends_on:
+      - zookeeper
+      - rustfs-init
+    environment:
+      FLUSS_PROPERTIES: |
+        bind.listeners: FLUSS://coordinator-server:9123
+        zookeeper.address: zookeeper:2181
+        remote.data.dir: s3://fluss/remote-data
+        s3.endpoint: http://rustfs:9000
+        s3.access-key: rustfsadmin
+        s3.secret-key: rustfsadmin
+        s3.region: us-east-1
+        s3.path-style-access: true
+        s3.assumed.role.arn: arn:aws:iam::000000000000:role/rustfsadmin
+        s3.assumed.role.sts.endpoint: http://rustfs:9000
+
+  tablet-server:
+    image: apache/fluss:1.0.0
+    command: tabletServer
+    depends_on:
+      - coordinator-server
+    volumes:
+      - ./data/tablet-server:/fluss/data
+    environment:
+      FLUSS_PROPERTIES: |
+        bind.listeners: FLUSS://tablet-server:9123
+        data.dir: /fluss/data
+        zookeeper.address: zookeeper:2181
+        remote.data.dir: s3://fluss/remote-data
+        s3.endpoint: http://rustfs:9000
+        s3.access-key: rustfsadmin
+        s3.secret-key: rustfsadmin
+        s3.region: us-east-1
+        s3.path-style-access: true
+        s3.assumed.role.arn: arn:aws:iam::000000000000:role/rustfsadmin
+        s3.assumed.role.sts.endpoint: http://rustfs:9000
+
+  jobmanager:
+    build: ./flink
+    image: fluss-demo-flink:1.20-1.0.0
+    command: jobmanager
+    ports:
+      - "8083:8081"
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: jobmanager
+
+  taskmanager:
+    <<: *flink
+    command: taskmanager
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: jobmanager
+        taskmanager.numberOfTaskSlots: 10
+        taskmanager.memory.process.size: 2048m
+        taskmanager.memory.framework.off-heap.size: 256m
+
+  sql-gateway:
+    <<: *flink
+    ports:
+      - "8084:8083"
+    command: >
+      /opt/flink/bin/sql-gateway.sh start-foreground
+      -Dsql-gateway.endpoint.rest.address=0.0.0.0
+      -Dsql-gateway.endpoint.rest.port=8083
+      -Dexecution.target=remote
+      -Drest.address=jobmanager
+      -Drest.port=8081
+      -Djobmanager.rpc.address=jobmanager
+
+  sql-client:
+    <<: *flink
+    profiles: ["client"]
+    command: /opt/sql-client/sql-client
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: jobmanager
+        rest.address: jobmanager
+
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=fluss
+      - POSTGRES_PASSWORD=fluss
+      - POSTGRES_DB=fluss
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+      - ./config/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fluss -d fluss"]
+      interval: 5s
+      retries: 20
+
+  superset:
+    build: ./superset
+    image: fluss-demo-superset:6.1.0
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8088:8088"
+    environment:
+      - SUPERSET_SECRET_KEY=${SUPERSET_SECRET_KEY:?eseguire ./start.sh}
+    volumes:
+      - ./superset/superset_config.py:/app/pythonpath/superset_config.py:ro
+      - ./superset/avvio.sh:/app/avvio.sh:ro
+      - ./data/superset:/app/superset_home
+    command: /app/avvio.sh
+
+  n8n:
+    image: n8nio/n8n:2.40.6
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - GENERIC_TIMEZONE=Europe/Rome
+      - N8N_SECURE_COOKIE=false
+    volumes:
+      - ./data/n8n:/home/node/.n8n
+      - ./n8n:/workflows:ro
