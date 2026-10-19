@@ -1,0 +1,35 @@
+FLUSS DEMO - PREREQUISITI
+
+Autore: Quirino Scaramastra
+
+
+SISTEMA
+
+- Linux, macOS o Windows con WSL2
+- Docker con Docker Compose v2 (Docker Engine o Docker Desktop)
+- python3, curl, openssl
+- circa 5 GB di RAM libera e 6 GB di disco per le immagini
+- porte libere: 5433, 5678, 8083, 8084, 8088, 9000, 9001
+
+
+IMMAGINI DOCKER
+
+Al primo avvio vengono scaricate o costruite:
+
+  apache/fluss:1.0.0
+  apache/fluss-quickstart-flink:1.20-1.0.0   (base dell'immagine Flink del lab)
+  zookeeper:3.9.2
+  rustfs/rustfs:1.0.0-alpha.83
+  rustfs/rc:v0.1.36
+  postgres:17
+  apache/superset:6.1.0                      (base dell'immagine Superset del lab)
+  n8nio/n8n:2.40.6
+
+L'immagine Flink scarica da Maven Central il connettore JDBC 3.3.0-1.20 e il driver
+PostgreSQL 42.7.14: serve una connessione a Internet.
+
+
+NOTE
+
+Le credenziali indicate in README.txt sono di laboratorio: non esporre le porte del lab
+fuori dal proprio PC.

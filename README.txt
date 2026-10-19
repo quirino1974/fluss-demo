@@ -6,19 +6,15 @@ per cliente, copia ordini e totali in PostgreSQL; Superset li mostra in una dash
 che si aggiorna ogni 10 secondi. n8n contiene un flusso di prova che inserisce ordini
 e legge i totali tramite il Flink SQL Gateway.
 
+Autore: Quirino Scaramastra
 
-REQUISITI
-
-- Linux, macOS o Windows con WSL2
-- Docker con Docker Compose v2 (Docker Engine o Docker Desktop)
-- python3, curl, openssl
-- circa 5 GB di RAM libera e 6 GB di disco per le immagini
-- porte libere: 5433, 5678, 8083, 8084, 8088, 9000, 9001
+Prima di installare leggere PREREQUISITES.txt. Le modifiche tra una versione e l'altra
+sono in RELEASE-NOTES.txt.
 
 
 INSTALLAZIONE
 
-  git clone <url-del-repository> fluss-demo
+  git clone https://github.com/quirino1974/fluss-demo.git
   cd fluss-demo
   chmod +x start.sh stop.sh
 

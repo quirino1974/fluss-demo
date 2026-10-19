@@ -1,0 +1,22 @@
+FLUSS DEMO - NOTE DI RILASCIO
+
+Autore: Quirino Scaramastra
+
+
+2026-10-19
+
+- Documentazione divisa in tre file di testo: README.txt (manuale), PREREQUISITES.txt
+  e RELEASE-NOTES.txt.
+- Nel manuale l'indirizzo reale del repository per il git clone.
+
+
+2026-10-17 - prima versione
+
+- Stack Docker con Apache Fluss 1.0.0 (coordinator e tablet server), ZooKeeper,
+  RustFS come storage S3, Apache Flink 1.20 con SQL Gateway, PostgreSQL 17,
+  Apache Superset 6.1.0 e n8n.
+- Quattro job Flink SQL: generatore-ordini, totali-per-cliente, export-postgres-ordini,
+  export-postgres-totali.
+- Dashboard Superset "Ordini Fluss in tempo reale" creata via API, aggiornata ogni 10 secondi.
+- Flusso n8n di prova che inserisce ordini e legge i totali dal Flink SQL Gateway.
+- Script start.sh e stop.sh; jobs/flink_jobs.py per avviare, fermare e controllare i job.
