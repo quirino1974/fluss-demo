@@ -7,6 +7,7 @@ che si aggiorna ogni 10 secondi. n8n contiene un flusso di prova che inserisce o
 e legge i totali tramite il Flink SQL Gateway.
 
 Autore: Quirino Scaramastra
+Progetto a scopo didattico.
 
 Prima di installare leggere PREREQUISITES.txt. Le modifiche tra una versione e l'altra
 sono in RELEASE-NOTES.txt.
